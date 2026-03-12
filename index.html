@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <title>Birthday Adventure</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body {
+      background: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Hero Section with Background Image */
+    .hero-section {
+      position: relative;
+      height: 65vh;
+      min-height: 500px;
+      background: linear-gradient(180deg, rgba(124,111,176,0.3) 0%, rgba(124,111,176,0.6) 100%),
+                  url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect fill="%23E8E1F0" width="800" height="600"/><circle cx="400" cy="300" r="200" fill="%23D4C9E3" opacity="0.3"/></svg>');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 40px 24px;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 400px;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', 'Noto Serif KR', serif;
+      font-size: 52px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      line-height: 1.1;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      font-weight: 400;
+      opacity: 0.95;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Password Form Section */
+    .form-section {
+      flex: 1;
+      background: white;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: block;
+      letter-spacing: 0.3px;
+    }
+
+    .pw-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 8px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      background: white;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+    }
+
+    .pw-input:hover {
+      border-color: var(--border-dark);
+    }
+
+    .pw-input:focus {
+      border-color: var(--text);
+      box-shadow: 0 0 0 1px var(--text);
+    }
+
+    .pw-input.error {
+      border-color: var(--error);
+      animation: shake 0.4s ease;
+    }
+
+    .enter-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--text);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.3px;
+    }
+
+    .enter-btn:hover {
+      background: #000000;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .enter-btn:active {
+      transform: scale(0.98);
+    }
+
+    .enter-btn.loading {
+      background: var(--primary);
+    }
+
+    .error-msg {
+      font-size: 14px;
+      color: var(--error);
+      margin-top: 12px;
+      min-height: 20px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      text-align: center;
+    }
+
+    .error-msg.show {
+      opacity: 1;
+    }
+
+    .footer-note {
+      font-size: 13px;
+      color: var(--text-light);
+      margin-top: 24px;
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title" id="heroTitle">Birthday<br>Adventure</h1>
+      <p class="hero-subtitle" id="heroSubtitle">특별한 하루가 당신을 기다리고 있어요</p>
+    </div>
+  </div>
+
+  <!-- Password Form Section -->
+  <div class="form-section">
+    <div class="form-container">
+      <label class="form-label" for="pwInput">비밀번호를 입력하세요</label>
+      <input
+        type="password"
+        id="pwInput"
+        class="pw-input"
+        placeholder="••••"
+        maxlength="12"
+        autocomplete="off"
+        inputmode="numeric"
+      />
+      <button class="enter-btn" id="enterBtn" onclick="submitPassword()">
+        입장하기
+      </button>
+      <p class="error-msg" id="errorMsg">
+        비밀번호가 일치하지 않습니다
+      </p>
+      <p class="footer-note">초대받은 분만 입장 가능합니다</p>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script>
+    // Update hero text from config
+    if (CONFIG.mainTitle) {
+      document.getElementById("heroTitle").innerHTML = CONFIG.mainTitle.replace(" ", "<br>");
+    }
+    if (CONFIG.mainSubtitle) {
+      document.getElementById("heroSubtitle").textContent = CONFIG.mainSubtitle;
+    }
+
+    document.getElementById("pwInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitPassword();
+    });
+
+    function submitPassword() {
+      const input = document.getElementById("pwInput").value;
+      const errorMsg = document.getElementById("errorMsg");
+      const pwInput = document.getElementById("pwInput");
+      const btn = document.getElementById("enterBtn");
+
+      if (input === CONFIG.password) {
+        sessionStorage.setItem("birthday_auth", "true");
+        btn.textContent = "입장 중...";
+        btn.classList.add("loading");
+        btn.disabled = true;
+        setTimeout(() => { window.location.href = "main.html"; }, 600);
+      } else {
+        pwInput.classList.remove("error");
+        void pwInput.offsetWidth;
+        pwInput.classList.add("error");
+        errorMsg.classList.add("show");
+        pwInput.value = "";
+        setTimeout(() => {
+          pwInput.classList.remove("error");
+          errorMsg.classList.remove("show");
+        }, 2500);
+        pwInput.focus();
+      }
+    }
+  </script>
+</body>
+</html>

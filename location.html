@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <title>장소 - Birthday Adventure</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=6ad3c69e80175b02e1aa51bd6c8f251f&autoload=false"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { background: white; margin: 0; padding-bottom: 80px; }
+    .header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .back-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; }
+    .header-title { font-size: 16px; font-weight: 600; color: var(--text); }
+    
+    #map { width: 100%; height: 400px; background: var(--bg-gray); border-bottom: 1px solid var(--border); }
+    
+    .location-content { padding: 24px; }
+    .location-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-light); margin-bottom: 12px; }
+    .location-name { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 8px; letter-spacing: -0.5px; }
+    .location-address { font-size: 15px; color: var(--text-light); margin-bottom: 20px; display: flex; align-items: flex-start; gap: 6px; }
+    .location-description { font-size: 15px; color: var(--text); line-height: 1.8; white-space: pre-line; padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    
+    .stamp-btn { width: 100%; padding: 14px; background: var(--text); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .stamp-btn:hover { background: #000; }
+    .stamp-btn.acquired { background: var(--primary); }
+
+    .media-gallery { margin-bottom: 24px; }
+    .media-gallery-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 12px; text-transform: uppercase; }
+    .media-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .media-grid.single { grid-template-columns: 1fr; }
+    .gallery-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 10px; background: var(--bg-gray); cursor: pointer; }
+    .gallery-img:hover { opacity: 0.9; }
+    .gallery-video { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; background: #000; }
+    .img-lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .img-lightbox.open { display: flex; }
+    .img-lightbox img { max-width: 100%; max-height: 90vh; border-radius: 10px; object-fit: contain; }
+    .lightbox-close { position: absolute; top: 16px; right: 20px; font-size: 32px; color: white; cursor: pointer; line-height: 1; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <div class="header-title" id="headerTitle">장소</div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="location-content">
+    <div class="location-badge" id="locationBadge">STAMP 1</div>
+    <h1 class="location-name" id="locationName">장소 이름</h1>
+    <div class="location-address"><span>📍</span><span id="locationAddress">주소</span></div>
+    <div class="location-description" id="locationDescription">설명</div>
+    
+    <div class="media-gallery" id="mediaGallery" style="display:none;">
+      <div class="media-gallery-title">📸 추억</div>
+      <div class="media-grid" id="mediaGrid"></div>
+    </div>
+
+    <button class="stamp-btn" id="stampBtn" onclick="acquireStamp()">
+      <span id="stampEmoji">🏅</span>
+      <span id="stampText">스탬프 획득하기</span>
+    </button>
+  </div>
+
+  <div class="img-lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close">✕</span>
+    <img id="lightboxImg" src="" alt="" />
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+    checkAuth();
+    const advId = parseInt(getUrlParam("id")) || 1;
+    const adv = getAdventureById(advId);
+    if (!adv) { document.body.innerHTML = '<div style="padding:60px 24px;text-align:center;">존재하지 않는 여정입니다</div>'; }
+    else { initPage(); }
+
+    function initPage() {
+      const loc = adv.location;
+      const done = isCompleted(advId);
+
+      document.getElementById("headerTitle").textContent = adv.title;
+      document.getElementById("locationBadge").textContent = `STAMP ${adv.id}`;
+      document.getElementById("locationName").textContent = loc.name;
+      document.getElementById("locationAddress").textContent = loc.address;
+      document.getElementById("locationDescription").textContent = loc.description;
+
+      if (done) {
+        const btn = document.getElementById("stampBtn");
+        btn.classList.add("acquired");
+        btn.disabled = true;
+        document.getElementById("stampEmoji").textContent = "✅";
+        document.getElementById("stampText").textContent = "스탬프 획득 완료";
+      }
+
+      renderMediaGallery(loc);
+
+      kakao.maps.load(function() {
+        const container = document.getElementById("map");
+        const options = {
+          center: new kakao.maps.LatLng(loc.lat, loc.lng),
+          level: 4,
+        };
+        const map = new kakao.maps.Map(container, options);
+        const markerPos = new kakao.maps.LatLng(loc.lat, loc.lng);
+        const marker = new kakao.maps.Marker({ position: markerPos });
+        marker.setMap(map);
+        const infowindow = new kakao.maps.InfoWindow({
+          content: '<div style="padding:8px 12px;font-size:13px;font-weight:600;font-family:\'Noto Sans KR\',sans-serif;color:#222;">' + loc.name + '</div>',
+          removable: false,
+        });
+        infowindow.open(map, marker);
+      });
+    }
+
+    function renderMediaGallery(loc) {
+      return;
+      const images = (loc.googleDriveImages || []).filter(id => id);
+      const videos = (loc.googleDriveVideos || []).filter(id => id);
+      if (images.length === 0 && videos.length === 0) return;
+
+      const gallery = document.getElementById("mediaGallery");
+      const grid = document.getElementById("mediaGrid");
+      const total = images.length + videos.length;
+      if (total === 1) grid.classList.add("single");
+
+      images.forEach(id => {
+        const img = document.createElement("img");
+        img.className = "gallery-img";
+        img.src = getDriveImageUrl(id);
+        img.alt = "추억 사진";
+        img.onclick = () => openLightbox(getDriveImageUrl(id));
+        grid.appendChild(img);
+      });
+
+      videos.forEach(id => {
+        const iframe = document.createElement("iframe");
+        iframe.className = "gallery-video";
+        iframe.src = getDriveVideoUrl(id);
+        iframe.allow = "autoplay; encrypted-media";
+        iframe.allowFullscreen = true;
+        grid.appendChild(iframe);
+      });
+
+      gallery.style.display = "block";
+    }
+
+    function openLightbox(src) {
+      document.getElementById("lightboxImg").src = src;
+      document.getElementById("lightbox").classList.add("open");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("open");
+    }
+
+    function acquireStamp() {
+      if (isCompleted(advId)) return;
+      addStamp(advId);
+      const btn = document.getElementById("stampBtn");
+      btn.classList.add("acquired");
+      btn.disabled = true;
+      document.getElementById("stampEmoji").textContent = "✅";
+      document.getElementById("stampText").textContent = "스탬프 획득 완료";
+      fireConfetti({ particleCount: 120, spread: 70, origin: { y: 0.5 } });
+      setTimeout(() => { alert("스탬프를 획득했어요! 🎉"); window.location.href = "main.html"; }, 1500);
+    }
+
+    function goBack() { window.location.href = "main.html"; }
+  </script>
+</body>
+</html>

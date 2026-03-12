@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <title>퀴즈 - Birthday Adventure</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { background: white; margin: 0; }
+    .header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .back-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; }
+    .header-title { font-size: 16px; font-weight: 600; color: var(--text); }
+
+    .photo-hero { width: 100%; height: 260px; object-fit: cover; display: block; background: var(--bg-gray); }
+    .photo-hero-placeholder { width: 100%; height: 160px; background: var(--bg-light); }
+
+    .hero-info { padding: 20px 24px 8px; }
+    .hero-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; }
+    .hero-title { font-size: 24px; font-weight: 700; color: var(--text); margin: 0; }
+
+    .quiz-content { padding: 16px 24px 24px; }
+    .question-box { background: var(--bg-light); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+    .question-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-light); margin-bottom: 12px; }
+    .question-text { font-size: 18px; font-weight: 600; color: var(--text); line-height: 1.6; }
+
+    .answer-input { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 16px; text-align: center; margin-bottom: 16px; box-sizing: border-box; }
+    .answer-input:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+    .answer-input.error { border-color: var(--error); animation: shake 0.4s ease; }
+
+    .submit-btn { width: 100%; padding: 14px; background: var(--text); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; }
+    .submit-btn:hover { background: #000; }
+    .submit-btn.success { background: var(--primary); }
+
+    .feedback-msg { text-align: center; font-size: 14px; margin-top: 12px; min-height: 20px; opacity: 0; transition: opacity 0.2s; }
+    .feedback-msg.show { opacity: 1; }
+    .feedback-msg.error { color: var(--error); }
+    .feedback-msg.success { color: var(--primary); }
+
+    .go-location-btn { width: 100%; padding: 14px; background: var(--text); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; text-align: center; }
+
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+    .img-lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .img-lightbox.open { display: flex; }
+    .img-lightbox img { max-width: 100%; max-height: 90vh; border-radius: 10px; object-fit: contain; }
+    .lightbox-close { position: absolute; top: 16px; right: 20px; font-size: 32px; color: white; cursor: pointer; line-height: 1; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <div class="header-title" id="headerTitle">퀴즈</div>
+  </div>
+
+  <div id="photoHeroWrap"></div>
+
+  <div class="hero-info">
+    <div class="hero-badge" id="heroBadge">STAMP 1</div>
+    <h1 class="hero-title" id="heroTitle">여정 1</h1>
+  </div>
+
+  <div class="img-lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close">✕</span>
+    <img id="lightboxImg" src="" alt="" />
+  </div>
+
+  <div class="quiz-content">
+    <div class="question-box">
+      <div class="question-label">Question</div>
+      <div class="question-text" id="questionText">로딩 중...</div>
+    </div>
+
+    <input type="text" id="answerInput" class="answer-input" placeholder="답을 입력하세요" autocomplete="off" />
+    <button class="submit-btn" id="submitBtn" onclick="submitAnswer()">정답 확인</button>
+    <div class="feedback-msg" id="feedbackMsg"></div>
+    
+    <a href="#" id="goLocationBtn" class="go-location-btn hidden" onclick="goToLocation()">📍 장소 확인하기</a>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+    checkAuth();
+    const advId = parseInt(getUrlParam("id")) || 1;
+    const adv = getAdventureById(advId);
+    if (!adv) { document.body.innerHTML = '<div style="padding:60px 24px;text-align:center;">존재하지 않는 여정입니다</div>'; }
+    else { initPage(); }
+
+    let attempts = 0;
+
+    function initPage() {
+      const done = isCompleted(advId);
+      document.getElementById("heroBadge").textContent = `STAMP ${adv.id}`;
+      document.getElementById("heroTitle").textContent = adv.title;
+      document.getElementById("headerTitle").textContent = adv.title;
+      document.getElementById("questionText").textContent = adv.quiz.question;
+
+      if (done) {
+        document.getElementById("answerInput").disabled = true;
+        document.getElementById("answerInput").placeholder = "이미 완료했어요 ✅";
+        document.getElementById("submitBtn").classList.add("hidden");
+        document.getElementById("goLocationBtn").classList.remove("hidden");
+      }
+
+      document.getElementById("answerInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") submitAnswer();
+      });
+
+      renderPhotos();
+    }
+
+    function renderPhotos() {
+      const images = (adv.location.googleDriveImages || []).filter(id => id);
+      const wrap = document.getElementById("photoHeroWrap");
+      if (images.length === 0) {
+        wrap.innerHTML = '<div class="photo-hero-placeholder"></div>';
+        return;
+      }
+      const img = document.createElement("img");
+      img.className = "photo-hero";
+      img.src = getDriveImageUrl(images[0]);
+      img.alt = "사진";
+      img.onclick = () => openLightbox(getDriveImageUrl(images[0]));
+      wrap.appendChild(img);
+    }
+
+    function openLightbox(src) {
+      document.getElementById("lightboxImg").src = src;
+      document.getElementById("lightbox").classList.add("open");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("open");
+    }
+
+    function submitAnswer() {
+      const input = document.getElementById("answerInput");
+      const feedbackMsg = document.getElementById("feedbackMsg");
+      const submitBtn = document.getElementById("submitBtn");
+      const value = input.value.trim();
+
+      if (!value) { input.focus(); return; }
+
+      if (checkAnswer(value, adv.quiz.answers)) {
+        input.classList.add("correct");
+        input.disabled = true;
+        submitBtn.disabled = true;
+        submitBtn.classList.add("success");
+        submitBtn.textContent = "✅ 정답!";
+        feedbackMsg.textContent = "정답이에요! 🎉";
+        feedbackMsg.className = "feedback-msg show success";
+        fireConfetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => goToLocation(), 2000);
+      } else {
+        attempts++;
+        input.classList.remove("error");
+        void input.offsetWidth;
+        input.classList.add("error");
+        input.value = "";
+        feedbackMsg.textContent = "틀렸어요! 다시 시도해보세요 🤔";
+        feedbackMsg.className = "feedback-msg show error";
+        setTimeout(() => feedbackMsg.classList.remove("show"), 2200);
+        input.focus();
+      }
+    }
+
+    function goToLocation() { window.location.href = `location.html?id=${advId}`; }
+    function goBack() { window.location.href = "main.html"; }
+  </script>
+</body>
+</html>
